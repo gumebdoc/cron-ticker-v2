@@ -9,13 +9,12 @@ on:
 
 env:
   NODE_VERSION: "20"
-  APP_NAME: "crone-ticker-v2"
 
 jobs:
-  #--------- JOB 2 TEST -------------
+  #--------- JOB BUILD -------------
 
-  test:
-    name: Tests
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,14 +22,17 @@ jobs:
         with:
           node-version: ${{env.NODE_VERSION}}
           cache: 'npm'
+
       - run: npm ci
 
-      - name: Run tests with coverage
-        run: npm run test:coverage
-      - name: Upload/Download coverage report
+      - name: Build App
+        run: npm run build
+        env:
+          APP_VERSION: ${{vars.APP_VERSION || '1.0.0'}}
+
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: coverage-${{github.sha}}
-          path: coverage/
-          retention-days: 3
+          name: build-${{github.sha}}
+          path: dist/
+          retention-days: 5

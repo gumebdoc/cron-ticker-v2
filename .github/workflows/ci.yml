@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI Pipeline Completo
 
 on:
   push:
@@ -8,26 +8,85 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: '20'
 
 jobs:
-  #--------- JOB BUILD -------------
 
-    test:
-      name: Test multiple Node versions ${{matrix.node-version}}
-      runs-on: ubuntu-latest
+#----- LINT
+  lint:
+    name: 🔍 Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
 
-      strategy:
-        matrix:
-          node-verion: [18, 20, 22]
-        fail-fast: false
+#------ TEST
+  test:
+    name: 🧪 Tests + Coverage
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-note@v4
+        with:
+          node-version: ${{env.NODE_VERSION}}
+          cache: 'npm'
+      - run: npm ci
+      - name: Upload coverage
+        run: npm run test:coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ github.sha }}
+          path: dist/
+          retention-days: 7
 
-      steps:
-        - uses: actions/checkout@v4
-        - name: Setup Node ${{matrix.node-version}}
-          uses: actions/setup-node@v4
-          with:
-            node-versions: ${{matrix.node-version}} 
-            cache: 'npm'
-        - run: npm ci
-        - run: npm run test
+  #-- completar el de build
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{env.NODE_VERSION}}
+          cache: 'npm'
+
+      - run: npm ci
+      - name: Build App
+        run: npm run build
+        env:
+          APP_VERSION: ${{vars.APP_VERSION || '1.0.0'}}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{github.sha}}
+          path: dist/
+          retention-days: 5
+
+  summary:
+    name: ✅ Summary
+    runs-on: ubuntu-latest
+    needs: [lint, test, build]
+    if: always()
+    steps:
+      - name: Pipeline result
+        run: |
+          echo '================================='
+          echo '  PIPELINE SUMMARY'
+          echo '================================='
+          echo '  Lint:  ${{ needs.lint.result }}'
+          echo '  Test:  ${{ needs.test.result }}'
+          echo '  Build: ${{ needs.build.result }}'
+          echo '================================='
+          echo '  Commit: ${{ github.sha }}'
+          echo '  Branch: ${{ github.ref_name }}'
+          echo '  Actor:  ${{ github.actor }}'
+          echo '================================='

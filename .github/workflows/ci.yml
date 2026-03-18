@@ -38,7 +38,7 @@ jobs:
           node-version: ${{env.NODE_VERSION}}
       - run: npm ci
       - name: Run tests with coverage
-        run: npm run tesd:coverage
+        run: npm run test:coverage
 
   #--------- JOB 3 BUILD -------------
 

@@ -12,32 +12,43 @@ env:
   APP_NAME: "crone-ticker-v2"
 
 jobs:
-  build:
+  #--------- JOB 1 LINT -------------
+
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-
-    env:
-      BUILD_DIR: dist
-
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{env.NODE_VERSION}}
+      - run: npm ci
+      - run: npm run lint
 
-      - name: Show local variables
-        run: |
-          echo "App: ${{env.APP_NAME}}, Node: ${{env.NODE_VERSION}}"
+  #--------- JOB 2 TEST -------------
 
-      - name: Show github variables
-        run: |
-          echo "App: ${{vars.APP_VERSION}}"
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{env.NODE_VERSION}}
+      - run: npm ci
+      - name: Run tests with coverage
+        run: npm run tesd:coverage
 
-      - name: Show github secrets
-        run: |
-          echo "Secret: ${{secrets.API_KEY}}"
+  #--------- JOB 3 BUILD -------------
 
-      - name: Show Github Functions
-        run: |
-          echo "${{toJson(github)}}"
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci
+      - run: npm run build
 
-      - name: Build
-        run: npm run build
-        env:
-          APP_VERSION: ${{vars.APP_VERSION}}
